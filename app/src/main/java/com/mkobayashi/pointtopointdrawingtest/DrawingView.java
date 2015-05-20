@@ -23,6 +23,8 @@ public class DrawingView extends View{
     private Canvas drawCanvas;
     //canvas bitmap
     private Bitmap canvasBitmap;
+    // keep track of how many times ACTION_DOWN
+    private int numberActionDown = 0;
 
 
     public DrawingView(Context context, AttributeSet attrs) {
@@ -64,7 +66,42 @@ public class DrawingView extends View{
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        //detect user touch
+        float touchX = event.getX();
+        float touchY = event.getY();
 
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+
+                if (numberActionDown == 0){
+                    drawPath.moveTo(touchX, touchY);
+                    ++numberActionDown;
+                }
+                else if(numberActionDown == 1){
+                    drawPath.lineTo(touchX, touchY);
+                    drawCanvas.drawPath(drawPath, drawPaint);
+                    drawPath.reset();
+                    numberActionDown = 0;
+                }
+                break;
+//            case MotionEvent.ACTION_MOVE:
+//                drawPath.lineTo(touchX, touchY);
+//                break;
+//            case MotionEvent.ACTION_UP:
+//                if (numberActionDown == 0){
+//                    ++numberActionDown;
+//                }
+//                if (numberActionDown == 1){
+//                    drawCanvas.drawPath(drawPath, drawPaint);
+//                    drawPath.reset();
+//                    numberActionDown = 0;
+//                }
+//                break;
+            default:
+                return false;
+        }
+
+        invalidate();
         return true;
     }
 
