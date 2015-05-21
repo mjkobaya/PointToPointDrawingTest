@@ -28,6 +28,8 @@ public class DrawingView extends View{
     private Canvas drawCanvas;
     //canvas bitmap
     private Bitmap canvasBitmap;
+    // backup bitmap for erasing last draw
+    //private Bitmap backupBitmap;
     // keep track of how many times ACTION_DOWN
     private int numberActionDown = 0;
     private ShapeDrawable[][] gridArray = new ShapeDrawable[gridRows][gridColumns];
@@ -38,6 +40,9 @@ public class DrawingView extends View{
 
     private int lastTouchedX = 0;
     private int lastTouchedY = 0;
+
+    private Path savedPath;
+    private boolean pathDrawn = false;
 
     public DrawingView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -143,25 +148,36 @@ public class DrawingView extends View{
                     drawPath.moveTo(lastTouchedX + (width / 2), lastTouchedY + (height / 2));
                     ++numberActionDown;
                 }
+                else if (numberActionDown == 0 && !checkIfGridPointPressed(touchX, touchY)){
+                    drawPath.reset();
+                    numberActionDown = 0;
+                }
                 else if(numberActionDown == 1 && checkIfGridPointPressed(touchX, touchY)){
                     drawPath.lineTo(lastTouchedX + (width / 2), lastTouchedY + (height / 2));
                     drawCanvas.drawPath(drawPath, drawPaint);
+                    savedPath = drawPath;
+                    pathDrawn = true;
+                    drawPath.reset();
+                    numberActionDown = 0;
+                }
+                else if(numberActionDown == 1 && !checkIfGridPointPressed(touchX, touchY)){
                     drawPath.reset();
                     numberActionDown = 0;
                 }
                 break;
 //            case MotionEvent.ACTION_MOVE:
-//                drawPath.lineTo(touchX, touchY);
+//                if (pathDrawn){
+//                    if (checkIfGridPointPressed(touchX, touchY)){
+//                        drawPath = savedPath;
+//                        drawPath.lineTo(lastTouchedX + (width / 2), lastTouchedY + (height / 2));
+//                        drawCanvas.drawPath(drawPath, drawPaint);
+//                        savedPath = drawPath;
+//                        drawPath.reset();
+//                    }
+//                }
 //                break;
 //            case MotionEvent.ACTION_UP:
-//                if (numberActionDown == 0){
-//                    ++numberActionDown;
-//                }
-//                if (numberActionDown == 1){
-//                    drawCanvas.drawPath(drawPath, drawPaint);
-//                    drawPath.reset();
-//                    numberActionDown = 0;
-//                }
+//
 //                break;
             default:
                 return false;
