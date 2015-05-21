@@ -9,9 +9,14 @@ import android.content.Context;
 import android.util.AttributeSet;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.drawable.ShapeDrawable;
+import android.graphics.drawable.shapes.OvalShape;
 
 
 public class DrawingView extends View{
+
+    private static int gridRows = 8;
+    private static int gridColumns = 5;
 
     //drawing path
     private Path drawPath;
@@ -25,7 +30,14 @@ public class DrawingView extends View{
     private Bitmap canvasBitmap;
     // keep track of how many times ACTION_DOWN
     private int numberActionDown = 0;
+    private ShapeDrawable[][] gridArray = new ShapeDrawable[gridRows][gridColumns];
+    private int[][] gridCoordArray = new int[gridRows * gridColumns][2];
 
+    private int width;
+    private int height;
+
+    private int lastTouchedX = 0;
+    private int lastTouchedY = 0;
 
     public DrawingView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -47,6 +59,53 @@ public class DrawingView extends View{
 
         // instantiate canvas
         canvasPaint = new Paint(Paint.DITHER_FLAG);
+
+    }
+
+    private void setupGrid(int viewWidth, int viewHeight){
+        // setup grid drawables
+        int bufferWidth = viewWidth / 10;
+        int bufferHeight = viewHeight / 20;
+
+        int x = bufferWidth;
+        int y = bufferHeight;
+        width = bufferWidth;
+        height = bufferWidth;
+
+        int widthBetweenGridPoints = ((viewWidth - (2 * bufferWidth)) - (gridColumns * width)) /
+                (gridColumns - 1);
+        int heightBetweenGridPoints = ((viewHeight - (2 * bufferHeight)) - (gridRows * height)) /
+                (gridRows - 1);
+
+        int gridCoordArrayCount = 0;
+
+        for (int i = 0; i < gridRows; ++i){
+            for (int j = 0; j < gridColumns; ++j){
+                gridArray[i][j] = new ShapeDrawable(new OvalShape());
+                gridArray[i][j].getPaint().setColor(0xff74AC23);
+                gridArray[i][j].setBounds(x, y, x + width, y + height);
+                gridCoordArray[gridCoordArrayCount][0] = x;
+                gridCoordArray[gridCoordArrayCount][1] = y;
+                ++gridCoordArrayCount;
+                x = x + width + widthBetweenGridPoints;
+            }
+
+            x = bufferWidth;
+            y = y + height + heightBetweenGridPoints;
+        }
+    }
+
+    private boolean checkIfGridPointPressed(float touchX, float touchY){
+        for (int i = 0; i < (gridRows * gridColumns); ++i){
+            if (gridCoordArray[i][0] <= touchX && touchX <= (gridCoordArray[i][0] + width)
+                    && gridCoordArray[i][1] <= touchY && touchY <= (gridCoordArray[i][1] + height)){
+                lastTouchedX = gridCoordArray[i][0];
+                lastTouchedY = gridCoordArray[i][1];
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Override
@@ -55,6 +114,7 @@ public class DrawingView extends View{
         super.onSizeChanged(w, h, oldw, oldh);
         canvasBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         drawCanvas = new Canvas(canvasBitmap);
+        setupGrid(w, h);
     }
 
     @Override
@@ -62,6 +122,12 @@ public class DrawingView extends View{
         //draw view
         canvas.drawBitmap(canvasBitmap, 0, 0, canvasPaint);
         canvas.drawPath(drawPath, drawPaint);
+
+        for (int i = 0; i < gridRows; ++i){
+            for (int j = 0; j < gridColumns; ++j){
+                gridArray[i][j].draw(canvas);
+            }
+        }
     }
 
     @Override
@@ -73,12 +139,12 @@ public class DrawingView extends View{
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
 
-                if (numberActionDown == 0){
-                    drawPath.moveTo(touchX, touchY);
+                if (numberActionDown == 0 && checkIfGridPointPressed(touchX, touchY)){
+                    drawPath.moveTo(lastTouchedX + (width / 2), lastTouchedY + (height / 2));
                     ++numberActionDown;
                 }
-                else if(numberActionDown == 1){
-                    drawPath.lineTo(touchX, touchY);
+                else if(numberActionDown == 1 && checkIfGridPointPressed(touchX, touchY)){
+                    drawPath.lineTo(lastTouchedX + (width / 2), lastTouchedY + (height / 2));
                     drawCanvas.drawPath(drawPath, drawPaint);
                     drawPath.reset();
                     numberActionDown = 0;
